@@ -15,10 +15,19 @@ defmodule MathEvalTest do
       assert {:ok, :math.sin(90)} == Abacus.eval("sin(90)")
       assert {:ok, Float.round(512.4122, 2)} == Abacus.eval("round(512.4122, 2)")
       assert {:ok, 2} == Abacus.eval("log10(100)")
+      assert {:ok, 2} == Abacus.eval("sqrt(4)")
+      assert {:ok, 20.1} == Abacus.eval("abs(-20.1)")
+      assert {:ok, 2} == Abacus.eval("mod(5, 3)")
+      assert {:ok, 3} == Abacus.eval("count(3, 5,-3)")
+      assert {:ok, 5} == Abacus.eval("sum(3, 5,-3)")
+      assert {:ok, 5} == Abacus.eval("max(3, 5,-3)")
+      assert {:ok, -3} == Abacus.eval("min(3, 5,-3)")
     end
 
     test "error" do
       assert {:error, _} = Abacus.eval("undefined_function()")
+      assert {:error, _} = Abacus.eval("max(3, 5,-3, false)")
+      assert {:error, _} = Abacus.eval("sum(3, 5,-3, b)")
     end
 
     test "scoped variables" do

@@ -123,6 +123,50 @@ defmodule Abacus.Eval do
       when is_number(a),
       do: {:ok, :math.log10(a)}
 
+  def eval({:function, "sqrt", [a]}, _)
+      when is_number(a),
+      do: {:ok, :math.sqrt(a)}
+
+  def eval({:function, "abs", [a]}, _)
+      when is_number(a),
+      do: {:ok, Kernel.abs(a)}
+
+  def eval({:function, "mod", [a, b]}, _)
+      when is_number(a),
+      do: {:ok, :math.fmod(a, b)}
+
+  def eval({:function, "max", data_set}, _scope) do
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      {:ok, Enum.max(data_set)}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "min", data_set}, _scope) do
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      {:ok, Enum.min(data_set)}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "count", data_set}, _scope) do
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      {:ok, Enum.count(data_set)}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "sum", data_set}, _scope) do
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      {:ok, Enum.sum(data_set)}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
   # IDENTITY
 
   def eval(number, _)
