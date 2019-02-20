@@ -53,11 +53,13 @@ defmodule Abacus do
 
   If `expr` is a string, it will be parsed first.
   """
-  @spec eval(expr::tuple | charlist | String.t) :: {:ok, result::number} | {:error, error::map}
-  @spec eval(expr::tuple | charlist | String.t, scope::map) :: {:ok, result::number} | {:error, error::map}
+  @spec eval(expr :: tuple | charlist | String.t()) ::
+          {:ok, result :: number} | {:error, error :: map}
+  @spec eval(expr :: tuple | charlist | String.t(), scope :: map) ::
+          {:ok, result :: number} | {:error, error :: map}
 
-  @spec eval!(expr::tuple | charlist | String.t) :: result::number
-  @spec eval!(expr::tuple | charlist | String.t, scope::map) :: result::number
+  @spec eval!(expr :: tuple | charlist | String.t()) :: result :: number
+  @spec eval!(expr :: tuple | charlist | String.t(), scope :: map) :: result :: number
   def eval(expr) do
     eval(expr, %{})
   end
@@ -94,7 +96,8 @@ defmodule Abacus do
     Abacus.Tree.reduce(expr, &Abacus.Eval.eval(&1, scope))
   end
 
-  @spec format(expr :: tuple | String.t | charlist) :: {:ok, String.t} | {:error, error::map}
+  @spec format(expr :: tuple | String.t() | charlist) ::
+          {:ok, String.t()} | {:error, error :: map}
   @doc """
   Pretty-prints the given expression.
 
@@ -104,7 +107,9 @@ defmodule Abacus do
     case parse(expr) do
       {:ok, expr} ->
         format(expr)
-      {:error, _} = error -> error
+
+      {:error, _} = error ->
+        error
     end
   end
 
@@ -116,7 +121,7 @@ defmodule Abacus do
     end
   end
 
-  @spec parse(expr :: String.t | charlist) :: {:ok, expr::tuple} | {:error, error::map}
+  @spec parse(expr :: String.t() | charlist) :: {:ok, expr :: tuple} | {:error, error :: map}
   @doc """
   Parses the given `expr` to a syntax tree.
   """
@@ -132,29 +137,41 @@ defmodule Abacus do
   def variables(expr) do
     Abacus.Tree.reduce(expr, fn
       {:access, variables} ->
-        res = Enum.map(variables, fn
-          {:variable, var} -> var
-          {:index, index} -> variables(index)
-        end)
-        |> List.flatten
-        |> Enum.uniq
+        res =
+          Enum.map(variables, fn
+            {:variable, var} -> var
+            {:index, index} -> variables(index)
+          end)
+          |> List.flatten()
+          |> Enum.uniq()
+
         {:ok, res}
+
       {_operator, a, b, c} ->
-        res = Enum.concat([a, b, c])
-        |> Enum.uniq
+        res =
+          Enum.concat([a, b, c])
+          |> Enum.uniq()
+
         {:ok, res}
+
       {_operator, a, b} ->
-        res = Enum.concat(a, b)
-        |> Enum.uniq
+        res =
+          Enum.concat(a, b)
+          |> Enum.uniq()
+
         {:ok, res}
-      {_operator, a} -> a
-      _ -> {:ok, []}
+
+      {_operator, a} ->
+        a
+
+      _ ->
+        {:ok, []}
     end)
   end
 
   defp lex(string) when is_binary(string) do
     string
-    |> String.to_charlist
+    |> String.to_charlist()
     |> lex
   end
 

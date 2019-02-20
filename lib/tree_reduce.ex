@@ -1,5 +1,5 @@
 defmodule Abacus.Tree do
-  @spec reduce(expr::term, fun::function) :: term
+  @spec reduce(expr :: term, fun :: function) :: term
   @doc """
   Works like Enum.reduce, but for trees 🌲
   """
@@ -11,6 +11,7 @@ defmodule Abacus.Tree do
       case reduce(arg, fun) do
         {:ok, res} ->
           %{ok: [res | oks], error: errors}
+
         {:error, res} ->
           %{ok: oks, error: [res, errors]}
       end
@@ -18,7 +19,9 @@ defmodule Abacus.Tree do
     |> case do
       %{error: [], ok: args} ->
         fun.({:function, name, Enum.reverse(args)})
-      %{error: errors} -> {:error, errors}
+
+      %{error: errors} ->
+        {:error, errors}
     end
   end
 
@@ -47,7 +50,8 @@ defmodule Abacus.Tree do
     end
   end
 
-  def reduce(other, fun) when is_number(other) or other in [nil, true, false] or is_binary(other) do
+  def reduce(other, fun)
+      when is_number(other) or other in [nil, true, false] or is_binary(other) do
     fun.(other)
   end
 end
