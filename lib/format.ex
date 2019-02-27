@@ -112,8 +112,7 @@ defmodule Abacus.Format do
 
     permutations =
       for c <- v, t <- v, f <- v do
-        format =
-          "#{parantheses(fcondition, c)} ? #{parantheses(ftrue, t)} : #{parantheses(ffalse, f)}"
+        format = "#{parantheses(fcondition, c)} ? #{parantheses(ftrue, t)} : #{parantheses(ffalse, f)}"
 
         {:ok, expr} = Abacus.parse(format)
         {format, expr}

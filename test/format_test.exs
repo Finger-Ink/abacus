@@ -22,8 +22,7 @@ defmodule FormatTest do
     test "functions" do
       assert format("sin(2)") == {:ok, "sin(2)"}
 
-      assert format("function_with_arguments(1, 2, (2 + 3))") ==
-               {:ok, "function_with_arguments(1, 2, 2 + 3)"}
+      assert format("function_with_arguments(1, 2, (2 + 3))") == {:ok, "function_with_arguments(1, 2, 2 + 3)"}
     end
 
     test "advanced operators" do

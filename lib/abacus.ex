@@ -53,8 +53,7 @@ defmodule Abacus do
 
   If `expr` is a string, it will be parsed first.
   """
-  @spec eval(expr :: tuple | charlist | String.t()) ::
-          {:ok, result :: number} | {:error, error :: map}
+  @spec eval(expr :: tuple | charlist | String.t()) :: {:ok, result :: number} | {:error, error :: map}
   @spec eval(expr :: tuple | charlist | String.t(), scope :: map) ::
           {:ok, result :: number} | {:error, error :: map}
 
@@ -96,8 +95,7 @@ defmodule Abacus do
     Abacus.Tree.reduce(expr, &Abacus.Eval.eval(&1, scope))
   end
 
-  @spec format(expr :: tuple | String.t() | charlist) ::
-          {:ok, String.t()} | {:error, error :: map}
+  @spec format(expr :: tuple | String.t() | charlist) :: {:ok, String.t()} | {:error, error :: map}
   @doc """
   Pretty-prints the given expression.
 

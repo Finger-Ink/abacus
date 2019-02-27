@@ -51,8 +51,7 @@ defmodule AbacusTest do
 
       assert {:access, [variable: "a", index: 2]} = parse_term("a[2]")
 
-      assert {:access, [variable: "a", variable: "b", index: {:add, 1, 2}]} =
-               parse_term("a.b[1+2]")
+      assert {:access, [variable: "a", variable: "b", index: {:add, 1, 2}]} = parse_term("a.b[1+2]")
     end
 
     test "bitwise operators" do
