@@ -36,6 +36,8 @@ An incomplete list of supported and planned features
  - [x] support for functions
    - [x] trigonometric functions(`sin`, `cos`, `tan`)
    - [x] floating point manipulation(`ceil`, `floor`, `round`)
+   - [x] data set analysis (`max`, `min`, `count`, `sum`)
+   - [x] additional math functions(`mod`, `sqrt`, `abs`)
  - [x] support for variables
  - [ ] support for parsing units
  - [ ] support for converting units

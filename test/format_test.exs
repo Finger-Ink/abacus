@@ -21,6 +21,7 @@ defmodule FormatTest do
 
     test "functions" do
       assert format("sin(2)") == {:ok, "sin(2)"}
+
       assert format("function_with_arguments(1, 2, (2 + 3))") == {:ok, "function_with_arguments(1, 2, 2 + 3)"}
     end
 
@@ -58,7 +59,9 @@ defmodule FormatTest do
       assert format("a ? true : false") == {:ok, "a ? true : false"}
       assert format("1==a ? true : false") == {:ok, "1 == a ? true : false"}
       assert format("2+(a ? true : false)") == {:ok, "2 + (a ? true : false)"}
-      assert format("2+(true ? not (a ? true : false):false)") == {:ok, "2 + (true ? not(a ? true : false) : false)"}
+
+      assert format("2+(true ? not (a ? true : false):false)") ==
+               {:ok, "2 + (true ? not(a ? true : false) : false)"}
     end
   end
 end

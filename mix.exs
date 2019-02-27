@@ -2,14 +2,16 @@ defmodule Abacus.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :abacus,
-     version: "0.4.2",
-     elixir: "~> 1.3",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     description: description(),
-     package: package(),
-     deps: deps()]
+    [
+      app: :abacus,
+      version: "0.4.2",
+      elixir: "~> 1.3",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      description: description(),
+      package: package(),
+      deps: deps()
+    ]
   end
 
   def application do
@@ -36,11 +38,13 @@ defmodule Abacus.Mixfile do
   end
 
   defp package do
-    [# These are the default files included in the package
-     name: :abacus,
-     files: ["lib", "mix.exs", "README*", "LICENSE*", "src"],
-     maintainers: ["Moritz Schmale"],
-     licenses: ["MIT"],
-     links: %{"GitHub" => "https://github.com/narrowtux/abacus"}]
+    # These are the default files included in the package
+    [
+      name: :abacus,
+      files: ["lib", "mix.exs", "README*", "LICENSE*", "src"],
+      maintainers: ["Moritz Schmale"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/narrowtux/abacus"}
+    ]
   end
 end

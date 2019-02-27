@@ -11,15 +11,12 @@ defmodule Abacus.Compile do
     gt: :>,
     lt: :<,
     gte: :>=,
-    lte: :<=,
+    lte: :<=
   ]
 
   for {abacus, elixir} <- @conversion do
     def compile({unquote(abacus), a, b}) do
-      {:ok, {
-        unquote(elixir),
-        [],
-        [a, b]}}
+      {:ok, {unquote(elixir), [], [a, b]}}
     end
   end
 
