@@ -8,6 +8,7 @@ Terminals '(' ')'
   '==' '!=' '<=' '>=' '<' '>' nil true false string.
 Nonterminals expr argument arguments function variable variables signed_number.
 Rootsymbol expr.
+Left 1200 '(' ')'.
 Unary 1000 '!'.
 Right 900 '^'.
 Unary 850 'not'.
@@ -69,6 +70,7 @@ expr -> number : extract_token('$1').
 expr -> function : '$1'.
 expr -> variables : '$1'.
 expr -> signed_number : '$1'.
+expr -> string : extract_token('$1').
 
 % Support signed numbers
 signed_number -> '+' number : extract_token('$2').
@@ -85,12 +87,11 @@ variables -> variables '[' expr ']' : {access, concat([extract('$1'), [{index, '
 argument -> expr : '$1'.
 arguments -> argument : ['$1'].
 arguments -> argument ',' arguments : ['$1' | '$3'].
+arguments -> '[' arguments ']' : '$2'.
 
-function -> word '(' ')' : {function, extract_token('$1'), []}.
 function -> word '(' arguments ')' : {function, extract_token('$1'), '$3'}.
-
-% Strings
-expr -> string : extract_token('$1').
+function -> word '(' arguments ',' arguments ')' : {function, extract_token('$1'), ['$3','$5']}.
+function -> word '(' ')' : {function, extract_token('$1'), []}.
 
 Erlang code.
 extract_token({_Token, _Line, Value}) -> Value.

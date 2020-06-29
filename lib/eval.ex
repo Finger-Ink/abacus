@@ -167,6 +167,65 @@ defmodule Abacus.Eval do
     end
   end
 
+  ## ------------------
+  ## Custom functions
+  ## ------------------
+
+  def eval({:function, "includes_any", [search_in, search_for]}, _scope) do
+    if is_list(search_in) do
+      cond do
+        is_list(search_for) -> {:ok, Enum.any?(search_in, fn x -> x in search_for end)}
+        is_binary(search_for) or is_number(search_for) -> {:ok, Enum.member?(search_in, search_for)}
+        true -> {:error, :einval}
+      end
+    else
+      {:error, :einval}
+    end
+  end
+
+  def eval({:function, "includes_all", [search_in, search_for]}, _scope) do
+    if is_list(search_in) do
+      cond do
+        is_list(search_for) -> {:ok, Enum.all?(search_for, fn x -> x in search_in end)}
+        is_binary(search_for) or is_number(search_for) -> {:ok, Enum.member?(search_in, search_for)}
+        true -> {:error, :einval}
+      end
+    else
+      {:error, :einval}
+    end
+  end
+
+  def eval({:function, "has_any_value", [maybe_value]}, _scope) do
+    cond do
+      is_list(maybe_value) -> {:ok, maybe_value != []}
+      is_binary(maybe_value) -> {:ok, maybe_value != ""}
+      true -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "has_no_value", [maybe_value]}, _scope) do
+    cond do
+      is_list(maybe_value) -> {:ok, maybe_value == []}
+      is_binary(maybe_value) -> {:ok, maybe_value == ""}
+      true -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "age", [dt]}, _scope) do
+    case dt do
+      nil ->
+        {:error, :einval}
+
+      <<date_string::binary-size(10)>> <> _ ->
+        {:ok, date} = NaiveDateTime.from_iso8601("#{date_string}T00:00:00")
+        diff_seconds = NaiveDateTime.diff(NaiveDateTime.utc_now(), date)
+        {:ok, (diff_seconds / 31_536_000) |> Kernel.trunc()}
+
+      _ ->
+        {:error, :einval}
+    end
+  end
+
   # IDENTITY
 
   def eval(number, _)

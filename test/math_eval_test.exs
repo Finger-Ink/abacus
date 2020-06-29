@@ -18,10 +18,45 @@ defmodule MathEvalTest do
       assert {:ok, 2} == Abacus.eval("sqrt(4)")
       assert {:ok, 20.1} == Abacus.eval("abs(-20.1)")
       assert {:ok, 2} == Abacus.eval("mod(5, 3)")
-      assert {:ok, 3} == Abacus.eval("count(3, 5,-3)")
-      assert {:ok, 5} == Abacus.eval("sum(3, 5,-3)")
-      assert {:ok, 5} == Abacus.eval("max(3, 5,-3)")
-      assert {:ok, -3} == Abacus.eval("min(3, 5,-3)")
+      assert {:ok, 3} == Abacus.eval("count(3, 5, -3)")
+      assert {:ok, 5} == Abacus.eval("sum(3, 5, -3)")
+      assert {:ok, 5} == Abacus.eval("max(3, 5, -3)")
+      assert {:ok, -3} == Abacus.eval("min(3, 5, -3)")
+    end
+
+    test "includes_any function call" do
+      assert {:ok, true} == Abacus.eval("includes_any([\"a\", \"b\", \"c\"], [\"a\"])")
+      assert {:ok, false} == Abacus.eval("includes_any([\"a\", \"b\", \"c\"], [\"d\"])")
+      assert {:ok, true} == Abacus.eval("includes_any(a, [\"a\"])", %{"a" => ["a", "b", "c"]})
+      assert {:ok, true} == Abacus.eval("includes_any(a, [b])", %{"a" => ["a", "b", "c"], "b" => "b"})
+    end
+
+    test "includes_all function call" do
+      assert {:ok, false} == Abacus.eval("includes_all(a, b)", %{"a" => ["a", "b", "c"], "b" => ["d"]})
+      assert {:ok, true} == Abacus.eval("includes_all(a, b)", %{"a" => ["a", "b", "c"], "b" => ["b", "c"]})
+
+      assert {:ok, true} ==
+               Abacus.eval("includes_all(a, b)", %{"a" => ["a", "b"], "b" => ["a", "b"]})
+
+      assert {:ok, false} ==
+               Abacus.eval("includes_all(a, b)", %{"a" => ["a"], "b" => ["a", "b"]})
+    end
+
+    test "has_any_value function call" do
+      assert {:ok, true} == Abacus.eval("has_any_value(a)", %{"a" => "Banana"})
+      assert {:ok, false} == Abacus.eval("has_any_value(a)", %{"a" => ""})
+    end
+
+    test "has_no_value function call" do
+      assert {:ok, false} == Abacus.eval("has_no_value(a)", %{"a" => "Banana"})
+      assert {:ok, true} == Abacus.eval("has_no_value(a)", %{"a" => ""})
+    end
+
+    test "age function call" do
+      assert {:ok, 35} == Abacus.eval("age(a)", %{"a" => "1984-10-03T00:00:00.000Z"})
+      assert {:ok, false} == Abacus.eval("age(a) > 36", %{"a" => "1984-10-03T00:00:00.000Z"})
+      assert {:ok, true} == Abacus.eval("age(a) <= 35", %{"a" => "1984-10-03T00:00:00.000Z"})
+      assert {:ok, true} == Abacus.eval("age(a) < 40", %{"a" => "1984-10-03T00:00:00.000Z"})
     end
 
     test "error" do
