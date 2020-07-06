@@ -24,6 +24,23 @@ defmodule MathEvalTest do
       assert {:ok, -3} == Abacus.eval("min(3, 5, -3)")
     end
 
+    test "string equality with em dash" do
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes — currently\"", %{"do_you_smoke" => "No"})
+    end
+
+    test "string equality" do
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes, currently\"", %{"do_you_smoke" => "No"})
+
+      assert {:ok, true} ==
+               Abacus.eval("do_you_smoke == \"Yes, currently\"", %{"do_you_smoke" => "Yes, currently"})
+
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes! currently\"", %{"do_you_smoke" => "No"})
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes% currently\"", %{"do_you_smoke" => "No"})
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes' currently\"", %{"do_you_smoke" => "No"})
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes. currently\"", %{"do_you_smoke" => "No"})
+      assert {:ok, false} == Abacus.eval("do_you_smoke == \"Yes+ currently\"", %{"do_you_smoke" => "No"})
+    end
+
     test "includes_any function call" do
       assert {:ok, true} == Abacus.eval("includes_any([\"a\", \"b\", \"c\"], [\"a\"])")
       assert {:ok, false} == Abacus.eval("includes_any([\"a\", \"b\", \"c\"], [\"d\"])")
