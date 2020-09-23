@@ -90,18 +90,30 @@ defmodule MathEvalTest do
       assert {:ok, 3_628_800} == Abacus.eval("(5 * 2)!")
     end
 
+    # This sort of access isn't supported, so we can instead support variables with periods.
+    # test "variables" do
+    #   assert {:ok, 10} ==
+    #            Abacus.eval("a.b.c[1]", %{
+    #              "a" => %{
+    #                "b" => %{
+    #                  "c" => [
+    #                    1,
+    #                    10,
+    #                    -42
+    #                  ]
+    #                }
+    #              }
+    #            })
+    # end
+
     test "variables" do
       assert {:ok, 10} ==
                Abacus.eval("a.b.c[1]", %{
-                 "a" => %{
-                   "b" => %{
-                     "c" => [
-                       1,
-                       10,
-                       -42
-                     ]
-                   }
-                 }
+                 "a.b.c" => [
+                   1,
+                   10,
+                   -42
+                 ]
                })
     end
 

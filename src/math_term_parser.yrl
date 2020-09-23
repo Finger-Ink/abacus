@@ -80,7 +80,8 @@ signed_number -> '-' number : -extract_token('$2').
 variable -> word : {variable, extract_token('$1')}.
 
 variables -> variable : {access, ['$1']}.
-variables -> variables '.' variable : {access, concat([extract('$1'), ['$3']])}.
+% This has been removed as we don't actually _want_ to be accessing variables via dots, our variables can have dots in them.
+%variables -> variables '.' variable : {access, concat([extract('$1'), ['$3']])}.
 variables -> variables '[' expr ']' : {access, concat([extract('$1'), [{index, '$3'}]])}.
 
 % Functions

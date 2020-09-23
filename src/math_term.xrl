@@ -7,7 +7,7 @@ P_OPEN = \(
 P_CLOSE = \)
 B_OPEN = \[
 B_CLOSE = \]
-WORD = [a-zA-Z_][a-zA-Z0-9_\-]*
+WORD = [a-zA-Z_][a-zA-Z0-9_\-\.]*
 
 PLUS = \+
 MINUS = \-
