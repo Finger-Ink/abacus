@@ -171,7 +171,7 @@ defmodule Abacus.Eval do
   ## Custom functions
   ## ------------------
 
-  def eval({:function, "includes_any", [search_in, search_for]}, _scope) do
+  def eval({:function, "includes_any", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
 
     cond do
@@ -186,7 +186,7 @@ defmodule Abacus.Eval do
     end
   end
 
-  def eval({:function, "includes_all", [search_in, search_for]}, _scope) do
+  def eval({:function, "includes_all", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
 
     cond do
