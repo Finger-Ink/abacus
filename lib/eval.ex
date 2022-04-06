@@ -172,26 +172,32 @@ defmodule Abacus.Eval do
   ## ------------------
 
   def eval({:function, "includes_any", [search_in, search_for]}, _scope) do
-    if is_list(search_in) do
-      cond do
-        is_list(search_for) -> {:ok, Enum.any?(search_in, fn x -> x in search_for end)}
-        is_binary(search_for) or is_number(search_for) -> {:ok, Enum.member?(search_in, search_for)}
-        true -> {:error, :einval}
-      end
-    else
-      {:error, :einval}
+    search_in = ensure_list(search_in)
+
+    cond do
+      is_list(search_for) ->
+        {:ok, Enum.any?(search_in, fn x -> x in search_for end)}
+
+      is_binary(search_for) or is_number(search_for) ->
+        {:ok, Enum.member?(search_in, search_for)}
+
+      true ->
+        {:error, :einval}
     end
   end
 
   def eval({:function, "includes_all", [search_in, search_for]}, _scope) do
-    if is_list(search_in) do
-      cond do
-        is_list(search_for) -> {:ok, Enum.all?(search_for, fn x -> x in search_in end)}
-        is_binary(search_for) or is_number(search_for) -> {:ok, Enum.member?(search_in, search_for)}
-        true -> {:error, :einval}
-      end
-    else
-      {:error, :einval}
+    search_in = ensure_list(search_in)
+
+    cond do
+      is_list(search_for) ->
+        {:ok, Enum.all?(search_for, fn x -> x in search_in end)}
+
+      is_binary(search_for) or is_number(search_for) ->
+        {:ok, Enum.member?(search_in, search_for)}
+
+      true ->
+        {:error, :einval}
     end
   end
 
@@ -307,4 +313,7 @@ defmodule Abacus.Eval do
   defp equals(str, atom) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
   defp equals(atom, str) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
   defp equals(a, b), do: a == b
+
+  defp ensure_list(list) when is_list(list), do: list
+  defp ensure_list(other), do: [other]
 end
