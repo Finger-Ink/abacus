@@ -1,11 +1,11 @@
 defmodule Abacus.Eval do
   @moduledoc """
-  Function definitions on how to evaluate a syntax tree.
+  Function definitions on how to evaluate a syntax tree.
 
   You usually don't need to call `eval/2` yourself, use `Abacus.eval/2` instead.
   """
 
-  use Bitwise
+  import Bitwise
   alias Abacus.Util
 
   @spec eval(expr :: tuple | number, scope :: map) ::
@@ -171,15 +171,29 @@ defmodule Abacus.Eval do
   ## Custom functions
   ## ------------------
 
+  def eval({:function, "raw", [maybe_value]}, _scope) do
+    cond do
+      is_list(maybe_value) -> {:ok, extract_raw_value(maybe_value)}
+      is_map(maybe_value) -> {:ok, extract_raw_value(maybe_value)}
+      true -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "value", [maybe_value]}, scope),
+    do: eval({:function, "raw", [maybe_value]}, scope)
+
   def eval({:function, "includes_any", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
 
     cond do
+      search_in |> Enum.at(0) == nil ->
+        {:ok, false}
+
       is_list(search_for) ->
-        {:ok, Enum.any?(search_in, fn x -> x in search_for end)}
+        {:ok, Enum.any?(search_for, fn x -> x |> exists_in_options?(search_in) end)}
 
       is_binary(search_for) or is_number(search_for) ->
-        {:ok, Enum.member?(search_in, search_for)}
+        {:ok, search_for |> exists_in_options?(search_in)}
 
       true ->
         {:error, :einval}
@@ -190,11 +204,14 @@ defmodule Abacus.Eval do
     search_in = ensure_list(search_in)
 
     cond do
+      search_in |> Enum.at(0) == nil ->
+        {:ok, false}
+
       is_list(search_for) ->
-        {:ok, Enum.all?(search_for, fn x -> x in search_in end)}
+        {:ok, Enum.all?(search_for, fn x -> x |> exists_in_options?(search_in) end)}
 
       is_binary(search_for) or is_number(search_for) ->
-        {:ok, Enum.member?(search_in, search_for)}
+        {:ok, search_for |> exists_in_options?(search_in)}
 
       true ->
         {:error, :einval}
@@ -316,4 +333,41 @@ defmodule Abacus.Eval do
 
   defp ensure_list(list) when is_list(list), do: list
   defp ensure_list(other), do: [other]
+
+  defp extract_raw_value(list) when is_list(list),
+    do: list |> Enum.map(fn v -> extract_raw_value(v) end)
+
+  defp extract_raw_value(%{"raw_value" => value}), do: value
+  defp extract_raw_value(_), do: nil
+
+  defp exists_in_options?(%{"display_text" => _, "raw_value" => _} = option, options) do
+    options
+    |> optionify()
+    |> contains?(option)
+  end
+
+  defp exists_in_options?(option, options) when is_binary(option) or is_number(option) do
+    options
+    |> normalise()
+    |> contains?(option)
+  end
+
+  defp optionify(options) when is_list(options), do: options |> Enum.map(&optionify_option/1)
+
+  defp optionify_option(%{"display_text" => _, "raw_value" => _} = option), do: option
+
+  defp optionify_option(other) when is_binary(other),
+    do: %{"display_text" => other, "raw_value" => other}
+
+  defp optionify_option(_), do: nil
+
+  defp normalise(options) when is_list(options), do: options |> Enum.map(&normalise_option/1)
+
+  defp normalise_option(%{"display_text" => text}), do: text
+  defp normalise_option(other), do: other
+
+  defp contains?(options, %{"display_text" => _, "raw_value" => _} = option),
+    do: Enum.member?(options, option)
+
+  defp contains?(options, string), do: Enum.member?(options, string)
 end
