@@ -175,6 +175,8 @@ defmodule Abacus.Eval do
     cond do
       is_list(maybe_value) -> {:ok, extract_raw_value(maybe_value)}
       is_map(maybe_value) -> {:ok, extract_raw_value(maybe_value)}
+      is_binary(maybe_value) -> {:ok, maybe_value}
+      is_number(maybe_value) -> {:ok, maybe_value}
       true -> {:error, :einval}
     end
   end
@@ -326,6 +328,15 @@ defmodule Abacus.Eval do
   end
 
   defp eval({:access, []}, value, _root), do: {:ok, value}
+
+  defp equals(%{"display_text" => text}, str) when is_binary(str), do: str == text
+  defp equals(str, %{"display_text" => text}) when is_binary(str), do: str == text
+
+  defp equals(
+         %{"display_text" => text1, "raw_value" => value1},
+         %{"display_text" => text2, "raw_value" => value2}
+       ),
+       do: text1 == text2 and value1 == value2
 
   defp equals(str, atom) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
   defp equals(atom, str) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
