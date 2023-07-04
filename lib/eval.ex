@@ -251,6 +251,26 @@ defmodule Abacus.Eval do
     end
   end
 
+  def eval({:function, "display_num", [maybe_value]}, _scope) do
+    cond do
+      is_list(maybe_value) -> {:ok, extract_display_text(maybe_value) |> force_number()}
+      is_map(maybe_value) -> {:ok, extract_display_text(maybe_value) |> force_number()}
+      is_binary(maybe_value) -> {:ok, maybe_value |> force_number()}
+      is_number(maybe_value) -> {:ok, maybe_value |> force_number()}
+      true -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "raw_num", [maybe_value]}, _scope) do
+    cond do
+      is_list(maybe_value) -> {:ok, extract_raw_value(maybe_value) |> force_number()}
+      is_map(maybe_value) -> {:ok, extract_raw_value(maybe_value) |> force_number()}
+      is_binary(maybe_value) -> {:ok, maybe_value |> force_number()}
+      is_number(maybe_value) -> {:ok, maybe_value |> force_number()}
+      true -> {:error, :einval}
+    end
+  end
+
   # IDENTITY
 
   def eval(number, _)
@@ -351,6 +371,12 @@ defmodule Abacus.Eval do
   defp extract_raw_value(%{"raw_value" => value}), do: value
   defp extract_raw_value(_), do: nil
 
+  defp extract_display_text(list) when is_list(list),
+    do: list |> Enum.map(fn v -> extract_display_text(v) end)
+
+  defp extract_display_text(%{"display_text" => value}), do: value
+  defp extract_display_text(_), do: nil
+
   defp exists_in_options?(%{"display_text" => _, "raw_value" => _} = option, options) do
     options
     |> optionify()
@@ -381,4 +407,25 @@ defmodule Abacus.Eval do
     do: Enum.member?(options, option)
 
   defp contains?(options, string), do: Enum.member?(options, string)
+
+  defp force_number(list) when is_list(list) do
+    {:error, :einval}
+  end
+
+  defp force_number(string) when is_binary(string) do
+    if String.contains?(string, ".") do
+      case Float.parse(string) do
+        {num, _rest} -> num
+        _ -> {:error, :einval}
+      end
+    else
+      case Integer.parse(string) do
+        {num, _rest} -> num
+        _ -> {:error, :einval}
+      end
+    end
+  end
+
+  defp force_number(num) when is_number(num), do: num
+  defp force_number(_), do: {:error, :einval}
 end
