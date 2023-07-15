@@ -135,22 +135,6 @@ defmodule Abacus.Eval do
       when is_number(a),
       do: {:ok, :math.fmod(a, b)}
 
-  def eval({:function, "max", data_set}, _scope) do
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
-      {:ok, Enum.max(data_set)}
-    else
-      _ -> {:error, :einval}
-    end
-  end
-
-  def eval({:function, "min", data_set}, _scope) do
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
-      {:ok, Enum.min(data_set)}
-    else
-      _ -> {:error, :einval}
-    end
-  end
-
   def eval({:function, "count", data_set}, _scope) do
     with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
       {:ok, Enum.count(data_set)}
@@ -159,9 +143,49 @@ defmodule Abacus.Eval do
     end
   end
 
+  ## ------------------
+  ## Maths
+  ## ------------------
+
+  # This used to be a standard function but I've changed it so that it can
+  # take any type of parameter we throw at it.
   def eval({:function, "sum", data_set}, _scope) do
+    data_set = data_set |> get_as_flat_numbers_try_raw_first()
+
     with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
-      {:ok, Enum.sum(data_set)}
+      result = Enum.sum(data_set) |> integer_if_possible()
+      {:ok, result}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "average", data_set}, _scope) do
+    data_set = data_set |> get_as_flat_numbers_try_raw_first()
+
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      result = (Enum.sum(data_set) / Enum.count(data_set)) |> integer_if_possible()
+      {:ok, result}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "max", data_set}, _scope) do
+    data_set = data_set |> get_as_flat_numbers_try_raw_first()
+
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      {:ok, Enum.max(data_set)}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "min", data_set}, _scope) do
+    data_set = data_set |> get_as_flat_numbers_try_raw_first()
+
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      {:ok, Enum.min(data_set)}
     else
       _ -> {:error, :einval}
     end
@@ -408,19 +432,43 @@ defmodule Abacus.Eval do
 
   defp contains?(options, string), do: Enum.member?(options, string)
 
+  ## ------------------
+  ## Maths helpers
+  ## ------------------
+
+  def get_as_flat_numbers_try_raw_first(maybe_value) when is_list(maybe_value) do
+    maybe_value
+    |> Enum.map(fn
+      val when is_list(val) -> get_as_flat_numbers_try_raw_first(val)
+      val -> get_any_number_or_null(val)
+    end)
+    |> List.flatten()
+    |> Enum.reject(&is_nil/1)
+  end
+
+  def get_as_flat_numbers_try_raw_first(maybe_value),
+    do: [get_any_number_or_null(maybe_value)] |> Enum.reject(&is_nil/1)
+
+  def get_any_number_or_null(%{"raw_value" => raw_value, "display_text" => display_text}),
+    do: force_number_or_nil(raw_value) || force_number_or_nil(display_text)
+
+  def get_any_number_or_null(maybe_value), do: force_number_or_nil(maybe_value)
+
   defp force_number(list) when is_list(list) do
     {:error, :einval}
   end
 
   defp force_number(string) when is_binary(string) do
+    # Our parsing specifically rejects anything that can't parse into
+    # floats or ints without any "left-overs".
     if String.contains?(string, ".") do
       case Float.parse(string) do
-        {num, _rest} -> num
+        {num, ""} -> num
         _ -> {:error, :einval}
       end
     else
       case Integer.parse(string) do
-        {num, _rest} -> num
+        {num, ""} -> num
         _ -> {:error, :einval}
       end
     end
@@ -428,4 +476,19 @@ defmodule Abacus.Eval do
 
   defp force_number(num) when is_number(num), do: num
   defp force_number(_), do: {:error, :einval}
+
+  defp force_number_or_nil(num) do
+    with {:error, :einval} <- force_number(num) do
+      nil
+    else
+      num -> num
+    end
+  end
+
+  defp integer_if_possible(int) when is_integer(int), do: int
+
+  defp integer_if_possible(float) when is_float(float) do
+    truncated = trunc(float)
+    if truncated == float, do: truncated, else: float
+  end
 end
