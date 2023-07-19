@@ -48,16 +48,16 @@ defmodule Abacus.Eval do
     do: {:ok, not equals(a, b)}
 
   def eval({:gt, a, b}, _),
-    do: {:ok, a > b}
+    do: {:ok, greater_than(a, b)}
 
   def eval({:gte, a, b}, _),
-    do: {:ok, a >= b}
+    do: {:ok, greater_than_or_equal_to(a, b)}
 
   def eval({:lt, a, b}, _),
-    do: {:ok, a < b}
+    do: {:ok, less_than(a, b)}
 
   def eval({:lte, a, b}, _),
-    do: {:ok, a <= b}
+    do: {:ok, less_than_or_equal_to(a, b)}
 
   # LOGICAL COMPARISION
 
@@ -144,7 +144,59 @@ defmodule Abacus.Eval do
   end
 
   ## ------------------
-  ## Maths
+  ## Normalisation for different data types being compared
+  ## ------------------
+
+  # > >= < <=
+  defp greater_than(a, b), do: compare(&>/2, a, b)
+  defp greater_than_or_equal_to(a, b), do: compare(&>=/2, a, b)
+  defp less_than(a, b), do: compare(&</2, a, b)
+  defp less_than_or_equal_to(a, b), do: compare(&<=/2, a, b)
+
+  defp string_compare_number(op, text, num) when is_binary(text) and is_number(num) do
+    case force_number(text) do
+      {:error, :einval} -> {:error, :einval}
+      forced_num -> apply(op, [forced_num, num])
+    end
+  end
+
+  defp compare(op, text, num) when is_binary(text) and is_number(num),
+    do: string_compare_number(op, text, num)
+
+  defp compare(op, num, text) when is_binary(text) and is_number(num),
+    do: string_compare_number(op, text, num)
+
+  defp compare(op, a, b), do: apply(op, [a, b])
+
+  # Equals
+  defp string_equals_number(text, num) when is_binary(text) and is_number(num) do
+    case force_number(text) do
+      {:error, :einval} -> text == "#{num}"
+      forced_num -> forced_num == num
+    end
+  end
+
+  defp equals(text, num) when is_binary(text) and is_number(num),
+    do: string_equals_number(text, num)
+
+  defp equals(num, text) when is_binary(text) and is_number(num),
+    do: string_equals_number(text, num)
+
+  defp equals(%{"display_text" => text}, str) when is_binary(str), do: str == text
+  defp equals(str, %{"display_text" => text}) when is_binary(str), do: str == text
+
+  defp equals(
+         %{"display_text" => text1, "raw_value" => value1},
+         %{"display_text" => text2, "raw_value" => value2}
+       ),
+       do: text1 == text2 and value1 == value2
+
+  defp equals(str, atom) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
+  defp equals(atom, str) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
+  defp equals(a, b), do: a == b
+
+  ## ------------------
+  ## Custom maths
   ## ------------------
 
   # This used to be a standard function but I've changed it so that it can
@@ -372,19 +424,6 @@ defmodule Abacus.Eval do
   end
 
   defp eval({:access, []}, value, _root), do: {:ok, value}
-
-  defp equals(%{"display_text" => text}, str) when is_binary(str), do: str == text
-  defp equals(str, %{"display_text" => text}) when is_binary(str), do: str == text
-
-  defp equals(
-         %{"display_text" => text1, "raw_value" => value1},
-         %{"display_text" => text2, "raw_value" => value2}
-       ),
-       do: text1 == text2 and value1 == value2
-
-  defp equals(str, atom) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
-  defp equals(atom, str) when is_binary(str) and is_atom(atom), do: str == Atom.to_string(atom)
-  defp equals(a, b), do: a == b
 
   defp ensure_list(list) when is_list(list), do: list
   defp ensure_list(other), do: [other]
