@@ -196,8 +196,8 @@ defmodule Abacus.Eval do
   ## ------------------
 
   # Custom equals and not equals for javascript
-  def eval({:function, "equals", [a, b]}, _scope), do: equals(a, b)
-  def eval({:function, "not_equals", [a, b]}, _scope), do: not equals(a, b)
+  def eval({:function, "equals", [a | [b]]}, _scope), do: {:ok, equals(a, b)}
+  def eval({:function, "not_equals", [a | [b]]}, _scope), do: {:ok, not equals(a, b)}
 
   def eval({:function, "raw", [maybe_value]}, _scope) do
     cond do
