@@ -135,19 +135,24 @@ defmodule Abacus.Eval do
       when is_number(a),
       do: {:ok, :math.fmod(a, b)}
 
-  def eval({:function, "count", data_set}, _scope) do
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
-      {:ok, Enum.count(data_set)}
-    else
-      _ -> {:error, :einval}
-    end
-  end
-
   ## ------------------
   ## Custom maths
   ## ------------------
 
   # This used to be a standard function but I've changed it so that it can
+  # take any type of parameter we throw at it.
+  def eval({:function, "count", data_set}, _scope) do
+    data_set = data_set |> get_as_flat_numbers_try_raw_first()
+
+    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+      result = Enum.count(data_set) |> integer_if_possible()
+      {:ok, result}
+    else
+      _ -> {:error, :einval}
+    end
+  end
+
+  # This also used to be a standard function but I've changed it so that it can
   # take any type of parameter we throw at it.
   def eval({:function, "sum", data_set}, _scope) do
     data_set = data_set |> get_as_flat_numbers_try_raw_first()
