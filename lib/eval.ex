@@ -143,7 +143,7 @@ defmodule Abacus.Eval do
   # take any type of parameter we throw at it.
   def eval({:function, "count", data_set}, _scope) do
     data_set = data_set |> get_as_flat_list()
-    result = Enum.count(data_set) |> integer_if_possible()
+    result = Enum.count(data_set)
     {:ok, result}
   end
 
