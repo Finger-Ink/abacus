@@ -354,12 +354,9 @@ defmodule Abacus.Eval do
   import Abacus.Tree, only: [reduce: 2]
 
   defp eval({:access, [{:variable, name} | rest]}, scope, root) do
-    case Map.get(scope, name, nil) do
-      nil ->
-        {:error, :einkey}
-
-      value ->
-        eval({:access, rest}, value, root)
+    case Map.has_key?(scope, name) do
+      true -> eval({:access, rest}, Map.get(scope, name, nil), root)
+      false -> {:error, {:einkey, name}}
     end
   end
 
