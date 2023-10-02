@@ -142,14 +142,9 @@ defmodule Abacus.Eval do
   # This used to be a standard function but I've changed it so that it can
   # take any type of parameter we throw at it.
   def eval({:function, "count", data_set}, _scope) do
-    data_set = data_set |> get_as_flat_numbers_try_raw_first()
-
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
-      result = Enum.count(data_set) |> integer_if_possible()
-      {:ok, result}
-    else
-      _ -> {:error, :einval}
-    end
+    data_set = data_set |> get_as_flat_list()
+    result = Enum.count(data_set) |> integer_if_possible()
+    {:ok, result}
   end
 
   # This also used to be a standard function but I've changed it so that it can
@@ -487,6 +482,11 @@ defmodule Abacus.Eval do
   ## ------------------
   ## Maths helpers
   ## ------------------
+
+  def get_as_flat_list(maybe_value) when is_list(maybe_value),
+    do: maybe_value |> List.flatten() |> Enum.reject(&is_nil/1)
+
+  def get_as_flat_list(maybe_value), do: [maybe_value] |> Enum.reject(&is_nil/1)
 
   def get_as_flat_numbers_try_raw_first(maybe_value) when is_list(maybe_value) do
     maybe_value
