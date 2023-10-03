@@ -230,6 +230,24 @@ defmodule Abacus.Eval do
     end
   end
 
+  def eval({:function, "does_not_include", [search_in | search_for]}, _scope) do
+    search_in = ensure_list(search_in)
+
+    cond do
+      search_in |> Enum.at(0) == nil ->
+        {:ok, true}
+
+      is_list(search_for) ->
+        {:ok, !Enum.any?(search_for, fn x -> x |> exists_in_options?(search_in) end)}
+
+      is_binary(search_for) or is_number(search_for) ->
+        {:ok, !(search_for |> exists_in_options?(search_in))}
+
+      true ->
+        {:error, :einval}
+    end
+  end
+
   def eval({:function, "includes_all", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
 
