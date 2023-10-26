@@ -268,6 +268,7 @@ defmodule Abacus.Eval do
 
   def eval({:function, "has_any_value", [maybe_value]}, _scope) do
     cond do
+      is_map(maybe_value) -> {:ok, true}
       is_list(maybe_value) -> {:ok, maybe_value != []}
       is_binary(maybe_value) -> {:ok, maybe_value != ""}
       true -> {:error, :einval}
@@ -276,6 +277,7 @@ defmodule Abacus.Eval do
 
   def eval({:function, "has_no_value", [maybe_value]}, _scope) do
     cond do
+      is_map(maybe_value) -> {:ok, false}
       is_list(maybe_value) -> {:ok, maybe_value == []}
       is_binary(maybe_value) -> {:ok, maybe_value == ""}
       true -> {:error, :einval}
