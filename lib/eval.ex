@@ -201,6 +201,7 @@ defmodule Abacus.Eval do
 
   def eval({:function, "raw", [maybe_value]}, _scope) do
     cond do
+      is_nil(maybe_value) -> {:ok, nil}
       is_list(maybe_value) -> {:ok, extract_raw_value(maybe_value)}
       is_map(maybe_value) -> {:ok, extract_raw_value(maybe_value)}
       is_binary(maybe_value) -> {:ok, maybe_value}
@@ -412,6 +413,7 @@ defmodule Abacus.Eval do
 
   defp string_compare_number(op, text, num) when is_binary(text) and is_number(num) do
     case force_number(text) do
+      nil -> {:error, :einval}
       {:error, :einval} -> {:error, :einval}
       forced_num -> apply(op, [forced_num, num])
     end
@@ -428,6 +430,7 @@ defmodule Abacus.Eval do
   # Equals
   defp string_equals_number(text, num) when is_binary(text) and is_number(num) do
     case force_number(text) do
+      nil -> text == "#{num}"
       {:error, :einval} -> text == "#{num}"
       forced_num -> forced_num == num
     end
@@ -534,13 +537,25 @@ defmodule Abacus.Eval do
     # floats or ints without any "left-overs".
     if String.contains?(string, ".") do
       case Float.parse(string) do
-        {num, ""} -> num
-        _ -> {:error, :einval}
+        {num, ""} ->
+          num
+
+        # new behaviour to align with JS
+        _ ->
+          nil
+          # old behaviour
+          # _ -> {:error, :einval}
       end
     else
       case Integer.parse(string) do
-        {num, ""} -> num
-        _ -> {:error, :einval}
+        {num, ""} ->
+          num
+
+        # new behaviour to align with JS
+        _ ->
+          nil
+          # old behaviour
+          # _ -> {:error, :einval}
       end
     end
   end
