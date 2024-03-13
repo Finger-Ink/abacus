@@ -445,6 +445,12 @@ defmodule Abacus.Eval do
   defp equals(%{"display_text" => text}, str) when is_binary(str), do: str == text
   defp equals(str, %{"display_text" => text}) when is_binary(str), do: str == text
 
+  # When we're testing equality with one item in the list, then do it!
+  # This is for legacy reasons where we used to allow X = "string" where X was a multi-select.
+  # We no longer allow this condition.
+  defp equals([%{"display_text" => text}], str) when is_binary(str), do: str == text
+  defp equals(str, [%{"display_text" => text}]) when is_binary(str), do: str == text
+
   defp equals(
          %{"display_text" => text1, "raw_value" => value1},
          %{"display_text" => text2, "raw_value" => value2}
