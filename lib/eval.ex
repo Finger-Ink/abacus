@@ -95,25 +95,28 @@ defmodule Abacus.Eval do
       when is_number(a),
       do: {:ok, :math.tan(a)}
 
+  # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "floor", [a]}, _)
       when is_number(a),
-      do: {:ok, Float.floor(a)}
+      do: {:ok, Float.floor(a) |> trunc()}
 
   def eval({:function, "floor", [a, precision]}, _)
       when is_number(a) and is_number(precision),
       do: {:ok, Float.floor(a, precision)}
 
+  # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "ceil", [a]}, _)
       when is_number(a),
-      do: {:ok, Float.ceil(a)}
+      do: {:ok, Float.ceil(a) |> trunc()}
 
   def eval({:function, "ceil", [a, precision]}, _)
       when is_number(a) and is_number(precision),
       do: {:ok, Float.ceil(a, precision)}
 
+  # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "round", [a]}, _)
       when is_number(a),
-      do: {:ok, Float.round(a)}
+      do: {:ok, Float.round(a) |> trunc()}
 
   def eval({:function, "round", [a, precision]}, _)
       when is_number(a) and is_number(precision),
