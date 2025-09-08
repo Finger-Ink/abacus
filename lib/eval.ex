@@ -13,28 +13,44 @@ defmodule Abacus.Eval do
 
   # BASIC ARITHMETIC
 
-  def eval({:add, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, a + b}
+  def eval({:add, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a + num_b}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:subtract, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, a - b}
+  def eval({:subtract, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a - num_b}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:divide, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, a / b}
+  def eval({:divide, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a / num_b}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:multiply, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, a * b}
+  def eval({:multiply, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a * num_b}
+      _ -> {:error, :einval}
+    end
+  end
 
   # OTHER OPERATORS
 
-  def eval({:power, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, :math.pow(a, b)}
+  def eval({:power, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, :math.pow(num_a, num_b)}
+      _ -> {:error, :einval}
+    end
+  end
 
+  # We nope out of this bad boy
   def eval({:factorial, a}, _)
       when is_number(a),
       do: {:ok, Util.factorial(a)}
@@ -83,60 +99,99 @@ defmodule Abacus.Eval do
 
   # FUNCTIONS
 
-  def eval({:function, "sin", [a]}, _)
-      when is_number(a),
-      do: {:ok, :math.sin(a)}
+  def eval({:function, "sin", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, :math.sin(num_a)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "cos", [a]}, _)
-      when is_number(a),
-      do: {:ok, :math.cos(a)}
+  def eval({:function, "cos", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, :math.cos(num_a)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "tan", [a]}, _)
-      when is_number(a),
-      do: {:ok, :math.tan(a)}
-
-  # Note: we now send the result to trunc() so we drop the decimals
-  def eval({:function, "floor", [a]}, _)
-      when is_number(a),
-      do: {:ok, Float.floor(a) |> trunc()}
-
-  def eval({:function, "floor", [a, precision]}, _)
-      when is_number(a) and is_number(precision),
-      do: {:ok, Float.floor(a, precision)}
-
-  # Note: we now send the result to trunc() so we drop the decimals
-  def eval({:function, "ceil", [a]}, _)
-      when is_number(a),
-      do: {:ok, Float.ceil(a) |> trunc()}
-
-  def eval({:function, "ceil", [a, precision]}, _)
-      when is_number(a) and is_number(precision),
-      do: {:ok, Float.ceil(a, precision)}
+  def eval({:function, "tan", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, :math.tan(num_a)}
+      _ -> {:error, :einval}
+    end
+  end
 
   # Note: we now send the result to trunc() so we drop the decimals
-  def eval({:function, "round", [a]}, _)
-      when is_number(a),
-      do: {:ok, Float.round(a) |> trunc()}
+  def eval({:function, "floor", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, Float.floor(num_a) |> trunc()}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "round", [a, precision]}, _)
-      when is_number(a) and is_number(precision),
-      do: {:ok, Float.round(a, precision)}
+  def eval({:function, "floor", [a, precision]}, _) do
+    case {to_number(a), to_number(precision)} do
+      {{:ok, num_a}, {:ok, num_precision}} -> {:ok, Float.floor(num_a, num_precision)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "log10", [a]}, _)
-      when is_number(a),
-      do: {:ok, :math.log10(a)}
+  # Note: we now send the result to trunc() so we drop the decimals
+  def eval({:function, "ceil", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, Float.ceil(num_a) |> trunc()}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "sqrt", [a]}, _)
-      when is_number(a),
-      do: {:ok, :math.sqrt(a)}
+  def eval({:function, "ceil", [a, precision]}, _) do
+    case {to_number(a), to_number(precision)} do
+      {{:ok, num_a}, {:ok, num_precision}} -> {:ok, Float.ceil(num_a, num_precision)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "abs", [a]}, _)
-      when is_number(a),
-      do: {:ok, Kernel.abs(a)}
+  # Note: we now send the result to trunc() so we drop the decimals
+  def eval({:function, "round", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, Float.round(num_a) |> trunc()}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:function, "mod", [a, b]}, _)
-      when is_number(a),
-      do: {:ok, :math.fmod(a, b)}
+  def eval({:function, "round", [a, precision]}, _) do
+    case {to_number(a), to_number(precision)} do
+      {{:ok, num_a}, {:ok, num_precision}} -> {:ok, Float.round(num_a, num_precision)}
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "log10", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, :math.log10(num_a)}
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "sqrt", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, :math.sqrt(num_a)}
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "abs", [a]}, _) do
+    case to_number(a) do
+      {:ok, num_a} -> {:ok, Kernel.abs(num_a)}
+      _ -> {:error, :einval}
+    end
+  end
+
+  def eval({:function, "mod", [a, b]}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, :math.fmod(num_a, num_b)}
+      _ -> {:error, :einval}
+    end
+  end
 
   ## ------------------
   ## Custom maths
@@ -347,29 +402,47 @@ defmodule Abacus.Eval do
 
   # BINARY OPERATORS
 
-  def eval({:not, expr}, _)
-      when is_number(expr),
-      do: {:ok, bnot(expr)}
+  def eval({:not, expr}, _) do
+    case to_number(expr) do
+      {:ok, num_expr} -> {:ok, bnot(num_expr)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:and, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, band(a, b)}
+  def eval({:and, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, band(num_a, num_b)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:or, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, bor(a, b)}
+  def eval({:or, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, bor(num_a, num_b)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:xor, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, bxor(a, b)}
+  def eval({:xor, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, bxor(num_a, num_b)}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:shift_right, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, a >>> b}
+  def eval({:shift_right, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a >>> num_b}
+      _ -> {:error, :einval}
+    end
+  end
 
-  def eval({:shift_left, a, b}, _)
-      when is_number(a) and is_number(b),
-      do: {:ok, a <<< b}
+  def eval({:shift_left, a, b}, _) do
+    case {to_number(a), to_number(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a <<< num_b}
+      _ -> {:error, :einval}
+    end
+  end
 
   # CATCH-ALL
   # !!! write new evaluations above this definition !!!
@@ -422,11 +495,12 @@ defmodule Abacus.Eval do
     end
   end
 
-  defp compare(op, text, num) when is_binary(text) and is_number(num),
-    do: string_compare_number(op, text, num)
-
-  defp compare(op, num, text) when is_binary(text) and is_number(num),
-    do: string_compare_number(op, text, num)
+  defp compare(op, text1, text2) do
+    case {force_number(text1), force_number(text2)} do
+      {num1, num2} when is_number(num1) and is_number(num2) -> apply(op, [num1, num2])
+      _ -> apply(op, [text1, text2])  # Fall back to string comparison
+    end
+  end
 
   defp compare(op, a, b), do: apply(op, [a, b])
 
@@ -513,6 +587,19 @@ defmodule Abacus.Eval do
   ## ------------------
   ## Maths helpers
   ## ------------------
+
+
+  # Helper to convert strings to numbers for math operations, using existing force_number logic
+  defp to_number(val) when is_number(val), do: {:ok, val}
+  defp to_number(val) when is_binary(val) do
+    case force_number(val) do
+      nil -> {:error, :einval}
+      {:error, :einval} -> {:error, :einval}
+      num -> {:ok, num}
+    end
+  end
+
+  defp to_number(_), do: {:error, :einval}
 
   def get_as_flat_list(maybe_value) when is_list(maybe_value),
     do: maybe_value |> List.flatten() |> Enum.reject(&is_nil/1)
