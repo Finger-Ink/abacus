@@ -150,6 +150,12 @@ defmodule Abacus.Eval do
     end
   end
 
+  # This is how we define round in our JS expressions
+  def eval({:function, "roundTo", [a]}, other), do: eval({:function, "round", [a]}, other)
+
+  def eval({:function, "roundTo", [a, precision]}, other),
+    do: eval({:function, "round", [a, precision]}, other)
+
   # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "round", [a]}, _) do
     case to_number(a) do
@@ -498,7 +504,8 @@ defmodule Abacus.Eval do
   defp compare(op, text1, text2) do
     case {force_number(text1), force_number(text2)} do
       {num1, num2} when is_number(num1) and is_number(num2) -> apply(op, [num1, num2])
-      _ -> apply(op, [text1, text2])  # Fall back to string comparison
+      # Fall back to string comparison
+      _ -> apply(op, [text1, text2])
     end
   end
 
@@ -588,9 +595,9 @@ defmodule Abacus.Eval do
   ## Maths helpers
   ## ------------------
 
-
   # Helper to convert strings to numbers for math operations, using existing force_number logic
   defp to_number(val) when is_number(val), do: {:ok, val}
+
   defp to_number(val) when is_binary(val) do
     case force_number(val) do
       nil -> {:error, :einval}
