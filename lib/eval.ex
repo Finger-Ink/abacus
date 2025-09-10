@@ -150,10 +150,11 @@ defmodule Abacus.Eval do
     end
   end
 
-  # This is how we define round in our JS expressions
-  def eval({:function, "roundTo", [a]}, other), do: eval({:function, "round", [a]}, other)
+  # This is how we define round in our JS expressions — both roundTo and round_to
+  def eval({:function, func, [a]}, other) when func in ["roundTo", "round_to"],
+    do: eval({:function, "round", [a]}, other)
 
-  def eval({:function, "roundTo", [a, precision]}, other),
+  def eval({:function, func, [a, precision]}, other) when func in ["roundTo", "round_to"],
     do: eval({:function, "round", [a, precision]}, other)
 
   # Note: we now send the result to trunc() so we drop the decimals
