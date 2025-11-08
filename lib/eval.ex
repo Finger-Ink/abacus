@@ -122,14 +122,14 @@ defmodule Abacus.Eval do
 
   # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "floor", [a]}, _) do
-    case to_number(a) do
+    case to_float(a) do
       {:ok, num_a} -> {:ok, Float.floor(num_a) |> trunc()}
       _ -> {:error, :einval}
     end
   end
 
   def eval({:function, "floor", [a, precision]}, _) do
-    case {to_number(a), to_number(precision)} do
+    case {to_float(a), to_integer(precision)} do
       {{:ok, num_a}, {:ok, num_precision}} -> {:ok, Float.floor(num_a, num_precision)}
       _ -> {:error, :einval}
     end
@@ -137,14 +137,14 @@ defmodule Abacus.Eval do
 
   # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "ceil", [a]}, _) do
-    case to_number(a) do
+    case to_float(a) do
       {:ok, num_a} -> {:ok, Float.ceil(num_a) |> trunc()}
       _ -> {:error, :einval}
     end
   end
 
   def eval({:function, "ceil", [a, precision]}, _) do
-    case {to_number(a), to_number(precision)} do
+    case {to_float(a), to_integer(precision)} do
       {{:ok, num_a}, {:ok, num_precision}} -> {:ok, Float.ceil(num_a, num_precision)}
       _ -> {:error, :einval}
     end
@@ -159,14 +159,14 @@ defmodule Abacus.Eval do
 
   # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "round", [a]}, _) do
-    case to_number(a) do
+    case to_float(a) do
       {:ok, num_a} -> {:ok, Float.round(num_a) |> trunc()}
       _ -> {:error, :einval}
     end
   end
 
   def eval({:function, "round", [a, precision]}, _) do
-    case {to_number(a), to_number(precision)} do
+    case {to_float(a), to_integer(precision)} do
       {{:ok, num_a}, {:ok, num_precision}} -> {:ok, Float.round(num_a, num_precision)}
       _ -> {:error, :einval}
     end
@@ -608,6 +608,36 @@ defmodule Abacus.Eval do
   end
 
   defp to_number(_), do: {:error, :einval}
+
+  # Helper to convert values to floats for Float.* operations
+  defp to_float(val) when is_float(val), do: {:ok, val}
+  defp to_float(val) when is_integer(val), do: {:ok, val * 1.0}
+
+  defp to_float(val) when is_binary(val) do
+    case force_number(val) do
+      nil -> {:error, :einval}
+      {:error, :einval} -> {:error, :einval}
+      num when is_integer(num) -> {:ok, num * 1.0}
+      num when is_float(num) -> {:ok, num}
+    end
+  end
+
+  defp to_float(_), do: {:error, :einval}
+
+  # Helper to convert values to integers for precision parameters (truncates floats)
+  defp to_integer(val) when is_integer(val), do: {:ok, val}
+  defp to_integer(val) when is_float(val), do: {:ok, trunc(val)}
+
+  defp to_integer(val) when is_binary(val) do
+    case force_number(val) do
+      nil -> {:error, :einval}
+      {:error, :einval} -> {:error, :einval}
+      num when is_integer(num) -> {:ok, num}
+      num when is_float(num) -> {:ok, trunc(num)}
+    end
+  end
+
+  defp to_integer(_), do: {:error, :einval}
 
   def get_as_flat_list(maybe_value) when is_list(maybe_value),
     do: maybe_value |> List.flatten() |> Enum.reject(&is_nil/1)
