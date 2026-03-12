@@ -175,6 +175,44 @@ defmodule MathEvalTest do
     end
   end
 
+  describe "average, max, min with empty/non-numeric data" do
+    test "average returns error for empty list" do
+      assert {:error, :einval} == Abacus.eval("average(a)", %{"a" => []})
+    end
+
+    test "max returns error for empty list" do
+      assert {:error, :einval} == Abacus.eval("max(a)", %{"a" => []})
+    end
+
+    test "min returns error for empty list" do
+      assert {:error, :einval} == Abacus.eval("min(a)", %{"a" => []})
+    end
+
+    test "average returns error for non-numeric values" do
+      assert {:error, :einval} == Abacus.eval("average(a, b)", %{"a" => "foo", "b" => "bar"})
+    end
+
+    test "max returns error for non-numeric values" do
+      assert {:error, :einval} == Abacus.eval("max(a, b)", %{"a" => "foo", "b" => "bar"})
+    end
+
+    test "min returns error for non-numeric values" do
+      assert {:error, :einval} == Abacus.eval("min(a, b)", %{"a" => "foo", "b" => "bar"})
+    end
+
+    test "average still works with valid numbers" do
+      assert {:ok, 2} == Abacus.eval("average(1, 2, 3)")
+    end
+
+    test "max still works with valid numbers" do
+      assert {:ok, 3} == Abacus.eval("max(1, 2, 3)")
+    end
+
+    test "min still works with valid numbers" do
+      assert {:ok, 1} == Abacus.eval("min(1, 2, 3)")
+    end
+  end
+
   describe "Float functions (floor, ceil, round)" do
     test "floor with integer input" do
       # Integer should be converted to float

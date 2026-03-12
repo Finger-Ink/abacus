@@ -228,7 +228,8 @@ defmodule Abacus.Eval do
   def eval({:function, "average", data_set}, _scope) do
     data_set = data_set |> get_as_flat_numbers_try_raw_first()
 
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+    with false <- data_set == [],
+         false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
       result = (Enum.sum(data_set) / Enum.count(data_set)) |> integer_if_possible()
       {:ok, result}
     else
@@ -239,7 +240,8 @@ defmodule Abacus.Eval do
   def eval({:function, "max", data_set}, _scope) do
     data_set = data_set |> get_as_flat_numbers_try_raw_first()
 
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+    with false <- data_set == [],
+         false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
       {:ok, Enum.max(data_set)}
     else
       _ -> {:error, :einval}
@@ -249,7 +251,8 @@ defmodule Abacus.Eval do
   def eval({:function, "min", data_set}, _scope) do
     data_set = data_set |> get_as_flat_numbers_try_raw_first()
 
-    with false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
+    with false <- data_set == [],
+         false <- Enum.any?(data_set, fn x -> !is_number(x) end) do
       {:ok, Enum.min(data_set)}
     else
       _ -> {:error, :einval}
