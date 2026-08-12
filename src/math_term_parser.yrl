@@ -1,5 +1,5 @@
 Terminals '(' ')'
-  '+' '/' '*' '-' '^'
+  '+' '/' '*' '-' '^' '%'
   word ',' number
   '!'
   '.' '[' ']'
@@ -13,7 +13,7 @@ Unary 1000 '!'.
 Right 900 '^'.
 Unary 850 'not'.
 Unary 800 '~'.
-Left 750 '*' '/'.
+Left 750 '*' '/' '%'.
 Left 700 '+' '-'.
 Left 600 '<<' '>>'.
 Left 590 '==' '!=' '<=' '<' '>=' '>'.
@@ -60,6 +60,7 @@ expr -> expr '+' expr : {add, '$1', '$3'}.
 expr -> expr '-' expr : {subtract, '$1', '$3'}.
 expr -> expr '/' expr : {divide, '$1', '$3'}.
 expr -> expr '*' expr : {multiply, '$1', '$3'}.
+expr -> expr '%' expr : {mod, '$1', '$3'}.
 expr -> expr '!' : {factorial, '$1'}.
 
 % Grouping

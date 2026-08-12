@@ -51,7 +51,35 @@ defmodule AbacusTest do
 
       assert {:access, [variable: "a", index: 2]} = parse_term("a[2]")
 
-      assert {:access, [variable: "a", variable: "b", index: {:add, 1, 2}]} = parse_term("a.b[1+2]")
+      # Dots are part of the identifier, not access syntax — our keys can
+      # contain periods ("referral_source.Blah").
+      assert {:access, [variable: "a.b", index: {:add, 1, 2}]} = parse_term("a.b[1+2]")
+    end
+
+    test "operators tight against variables are operators, not identifier characters" do
+      assert {:subtract, {:access, [variable: "ka"]}, {:access, [variable: "kb"]}} =
+               parse_term("ka-kb")
+
+      assert {:subtract, {:access, [variable: "ka"]}, {:access, [variable: "kb"]}} =
+               parse_term("ka- kb")
+
+      assert {:subtract, {:access, [variable: "ka"]}, {:access, [variable: "kb"]}} =
+               parse_term("ka -kb")
+
+      assert {:add, {:access, [variable: "ka"]}, {:access, [variable: "kb"]}} =
+               parse_term("ka+kb")
+
+      assert {:subtract, {:access, [variable: "ka.b"]}, {:access, [variable: "kc"]}} =
+               parse_term("ka.b-kc")
+    end
+
+    test "modulo operator" do
+      assert {:mod, 5, 2} = parse_term("5 % 2")
+      assert {:mod, 5, 2} = parse_term("5%2")
+
+      # Same precedence tier as * and /
+      assert {:add, {:mod, 5, 2}, 1} = parse_term("5 % 2 + 1")
+      assert {:mod, {:access, [variable: "ka"]}, {:access, [variable: "kb"]}} = parse_term("ka%kb")
     end
 
     test "bitwise operators" do
@@ -65,8 +93,34 @@ defmodule AbacusTest do
 
     test "ternary operator" do
       assert {:ternary_if, {:neq, {:access, [variable: "battery"]}, 0},
-              {:divide, {:subtract, {:access, [variable: "battery"]}, 1}, 253},
-              nil} = parse_term("battery != 0 ? (battery - 1) / 253 : null")
+              {:divide, {:subtract, {:access, [variable: "battery"]}, 1}, 253}, nil} =
+               parse_term("battery != 0 ? (battery - 1) / 253 : null")
+    end
+  end
+
+  describe "variables/1" do
+    test "arithmetic, including tight operators" do
+      {:ok, expr} = Abacus.parse("ka-kb + kc * 2")
+      assert Abacus.variables(expr) == ["ka", "kb", "kc"]
+    end
+
+    test "functions and ternaries" do
+      {:ok, expr} = Abacus.parse("has_any_value(ka) ? sum(kb, kc) : kd")
+      assert Abacus.variables(expr) == ["ka", "kb", "kc", "kd"]
+    end
+
+    test "index access, deduplication" do
+      {:ok, expr} = Abacus.parse("klist[ki] + klist[0]")
+      assert Abacus.variables(expr) == ["klist", "ki"]
+    end
+
+    test "accepts a parse result directly" do
+      assert Abacus.variables(Abacus.parse("ka + 1")) == ["ka"]
+    end
+
+    test "expressions with no variables" do
+      {:ok, expr} = Abacus.parse("1 + 2 * 3")
+      assert Abacus.variables(expr) == []
     end
   end
 

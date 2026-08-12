@@ -10,6 +10,7 @@ defmodule Abacus.Format do
     :subtract,
     :divide,
     :multiply,
+    :mod,
     :power,
     :and,
     :or,
@@ -33,6 +34,12 @@ defmodule Abacus.Format do
   def format(number) when is_float(number), do: Float.to_string(number)
 
   def format(string) when is_binary(string) do
+    escaped =
+      string
+      |> String.replace("\\", "\\\\")
+      |> String.replace("\"", "\\\"")
+
+    "\"" <> escaped <> "\""
   end
 
   def format({operator, a, b} = expr) when operator in @binary_operators do
@@ -132,6 +139,7 @@ defmodule Abacus.Format do
       :subtract -> "-"
       :divide -> "/"
       :multiply -> "*"
+      :mod -> "%"
       :power -> "^"
       :and -> "&"
       :or -> "|"

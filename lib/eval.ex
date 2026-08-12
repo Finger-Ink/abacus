@@ -6,49 +6,32 @@ defmodule Abacus.Eval do
   """
 
   import Bitwise
+  alias Abacus.Number
   alias Abacus.Util
 
   @spec eval(expr :: tuple | number, scope :: map) ::
           {:ok, result :: number} | {:ok, boolean} | {:ok, nil} | {:error, term}
 
   # BASIC ARITHMETIC
+  # Operands coerce through Abacus.Number.extract/1 (blank → 0). Anything the
+  # extractor refuses — or arithmetic that cannot produce a finite number,
+  # like a zero divisor — makes the expression unevaluable, never a raise.
 
-  def eval({:add, a, b}, _) do
-    case {to_number(a), to_number(b)} do
-      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a + num_b}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:add, a, b}, _), do: arithmetic(a, b, &Kernel.+/2)
 
-  def eval({:subtract, a, b}, _) do
-    case {to_number(a), to_number(b)} do
-      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a - num_b}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:subtract, a, b}, _), do: arithmetic(a, b, &Kernel.-/2)
 
-  def eval({:divide, a, b}, _) do
-    case {to_number(a), to_number(b)} do
-      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a / num_b}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:divide, a, b}, _), do: arithmetic(a, b, &Kernel.//2)
 
-  def eval({:multiply, a, b}, _) do
-    case {to_number(a), to_number(b)} do
-      {{:ok, num_a}, {:ok, num_b}} -> {:ok, num_a * num_b}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:multiply, a, b}, _), do: arithmetic(a, b, &Kernel.*/2)
 
   # OTHER OPERATORS
 
-  def eval({:power, a, b}, _) do
-    case {to_number(a), to_number(b)} do
-      {{:ok, num_a}, {:ok, num_b}} -> {:ok, :math.pow(num_a, num_b)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:power, a, b}, _), do: arithmetic(a, b, &:math.pow/2)
+
+  # `%` — remainder with JS semantics (the result takes the dividend's sign,
+  # which is what :math.fmod/2 does too)
+  def eval({:mod, a, b}, _), do: arithmetic(a, b, &:math.fmod/2)
 
   # We nope out of this bad boy
   def eval({:factorial, a}, _)
@@ -99,26 +82,11 @@ defmodule Abacus.Eval do
 
   # FUNCTIONS
 
-  def eval({:function, "sin", [a]}, _) do
-    case to_number(a) do
-      {:ok, num_a} -> {:ok, :math.sin(num_a)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "sin", [a]}, _), do: unary_math(a, &:math.sin/1)
 
-  def eval({:function, "cos", [a]}, _) do
-    case to_number(a) do
-      {:ok, num_a} -> {:ok, :math.cos(num_a)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "cos", [a]}, _), do: unary_math(a, &:math.cos/1)
 
-  def eval({:function, "tan", [a]}, _) do
-    case to_number(a) do
-      {:ok, num_a} -> {:ok, :math.tan(num_a)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "tan", [a]}, _), do: unary_math(a, &:math.tan/1)
 
   # Note: we now send the result to trunc() so we drop the decimals
   def eval({:function, "floor", [a]}, _) do
@@ -172,33 +140,13 @@ defmodule Abacus.Eval do
     end
   end
 
-  def eval({:function, "log10", [a]}, _) do
-    case to_number(a) do
-      {:ok, num_a} -> {:ok, :math.log10(num_a)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "log10", [a]}, _), do: unary_math(a, &:math.log10/1)
 
-  def eval({:function, "sqrt", [a]}, _) do
-    case to_number(a) do
-      {:ok, num_a} -> {:ok, :math.sqrt(num_a)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "sqrt", [a]}, _), do: unary_math(a, &:math.sqrt/1)
 
-  def eval({:function, "abs", [a]}, _) do
-    case to_number(a) do
-      {:ok, num_a} -> {:ok, Kernel.abs(num_a)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "abs", [a]}, _), do: unary_math(a, &Kernel.abs/1)
 
-  def eval({:function, "mod", [a, b]}, _) do
-    case {to_number(a), to_number(b)} do
-      {{:ok, num_a}, {:ok, num_b}} -> {:ok, :math.fmod(num_a, num_b)}
-      _ -> {:error, :einval}
-    end
-  end
+  def eval({:function, "mod", [a, b]}, _), do: arithmetic(a, b, &:math.fmod/2)
 
   ## ------------------
   ## Custom maths
@@ -281,8 +229,22 @@ defmodule Abacus.Eval do
   def eval({:function, "value", [maybe_value]}, scope),
     do: eval({:function, "raw", [maybe_value]}, scope)
 
+  # Mirrors the JS engine's getDisplayText: a single-element list of options
+  # yields that option's display text; longer lists yield the list of texts.
+  def eval({:function, "display", [maybe_value]}, _scope) do
+    cond do
+      is_nil(maybe_value) -> {:ok, nil}
+      is_number(maybe_value) -> {:ok, maybe_value}
+      is_binary(maybe_value) -> {:ok, maybe_value}
+      is_list(maybe_value) -> {:ok, display_text_for_list(maybe_value)}
+      is_map(maybe_value) -> {:ok, extract_display_text(maybe_value)}
+      true -> {:error, :einval}
+    end
+  end
+
   def eval({:function, "includes_any", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
+    search_for = List.flatten(search_for)
 
     cond do
       search_in |> Enum.at(0) == nil ->
@@ -301,6 +263,7 @@ defmodule Abacus.Eval do
 
   def eval({:function, "does_not_include", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
+    search_for = List.flatten(search_for)
 
     cond do
       search_in |> Enum.at(0) == nil ->
@@ -319,6 +282,7 @@ defmodule Abacus.Eval do
 
   def eval({:function, "includes_all", [search_in | search_for]}, _scope) do
     search_in = ensure_list(search_in)
+    search_for = List.flatten(search_for)
 
     cond do
       search_in |> Enum.at(0) == nil ->
@@ -372,21 +336,17 @@ defmodule Abacus.Eval do
 
   def eval({:function, "display_num", [maybe_value]}, _scope) do
     cond do
-      is_list(maybe_value) -> {:ok, extract_display_text(maybe_value) |> force_number()}
-      is_map(maybe_value) -> {:ok, extract_display_text(maybe_value) |> force_number()}
-      is_binary(maybe_value) -> {:ok, maybe_value |> force_number()}
-      is_number(maybe_value) -> {:ok, maybe_value |> force_number()}
-      true -> {:error, :einval}
+      is_list(maybe_value) -> {:ok, extract_display_text(maybe_value) |> number_or_nil()}
+      is_map(maybe_value) -> {:ok, extract_display_text(maybe_value) |> number_or_nil()}
+      true -> {:ok, number_or_nil(maybe_value)}
     end
   end
 
   def eval({:function, "raw_num", [maybe_value]}, _scope) do
     cond do
-      is_list(maybe_value) -> {:ok, extract_raw_value(maybe_value) |> force_number()}
-      is_map(maybe_value) -> {:ok, extract_raw_value(maybe_value) |> force_number()}
-      is_binary(maybe_value) -> {:ok, maybe_value |> force_number()}
-      is_number(maybe_value) -> {:ok, maybe_value |> force_number()}
-      true -> {:error, :einval}
+      is_list(maybe_value) -> {:ok, extract_raw_value(maybe_value) |> number_or_nil()}
+      is_map(maybe_value) -> {:ok, extract_raw_value(maybe_value) |> number_or_nil()}
+      true -> {:ok, number_or_nil(maybe_value)}
     end
   end
 
@@ -497,23 +457,16 @@ defmodule Abacus.Eval do
   defp less_than(a, b), do: compare(&</2, a, b)
   defp less_than_or_equal_to(a, b), do: compare(&<=/2, a, b)
 
-  defp string_compare_number(op, text, num) when is_binary(text) and is_number(num) do
-    case force_number(text) do
-      nil -> {:error, :einval}
-      {:error, :einval} -> {:error, :einval}
-      forced_num -> apply(op, [forced_num, num])
+  # Ordering comparisons follow the JS engine's contract: coerce both sides
+  # through the number extractor when possible, fall back to lexicographic
+  # comparison when both are non-numeric strings, and refuse everything else.
+  defp compare(op, a, b) do
+    case {Number.extract(a), Number.extract(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> apply(op, [num_a, num_b])
+      _ when is_binary(a) and is_binary(b) -> apply(op, [a, b])
+      _ -> false
     end
   end
-
-  defp compare(op, text1, text2) do
-    case {force_number(text1), force_number(text2)} do
-      {num1, num2} when is_number(num1) and is_number(num2) -> apply(op, [num1, num2])
-      # Fall back to string comparison
-      _ -> apply(op, [text1, text2])
-    end
-  end
-
-  defp compare(op, a, b), do: apply(op, [a, b])
 
   # Equals
   defp string_equals_number(text, num) when is_binary(text) and is_number(num) do
@@ -564,6 +517,10 @@ defmodule Abacus.Eval do
   defp extract_display_text(%{"display_text" => value}), do: value
   defp extract_display_text(_), do: nil
 
+  defp display_text_for_list([]), do: nil
+  defp display_text_for_list([only]), do: extract_display_text(only)
+  defp display_text_for_list(list), do: extract_display_text(list)
+
   defp exists_in_options?(%{"display_text" => _, "raw_value" => _} = option, options) do
     options
     |> optionify()
@@ -599,48 +556,60 @@ defmodule Abacus.Eval do
   ## Maths helpers
   ## ------------------
 
-  # Helper to convert strings to numbers for math operations, using existing force_number logic
-  defp to_number(val) when is_number(val), do: {:ok, val}
-
-  defp to_number(val) when is_binary(val) do
-    case force_number(val) do
-      nil -> {:error, :einval}
-      {:error, :einval} -> {:error, :einval}
-      num -> {:ok, num}
+  defp arithmetic(a, b, op) do
+    case {Number.extract(a), Number.extract(b)} do
+      {{:ok, num_a}, {:ok, num_b}} -> apply_arithmetic(num_a, num_b, op)
+      _ -> {:error, :einval}
     end
   end
 
-  defp to_number(_), do: {:error, :einval}
+  # Zero divisors (`/`, `%`), float overflow (`^`) and friends raise
+  # ArithmeticError; the contract is "unevaluable", never a crash.
+  defp apply_arithmetic(num_a, num_b, op) do
+    {:ok, op.(num_a, num_b) |> integer_if_possible()}
+  rescue
+    ArithmeticError -> {:error, :einval}
+  end
+
+  defp unary_math(a, fun) do
+    case to_number(a) do
+      {:ok, num} -> apply_unary_math(num, fun)
+      _ -> {:error, :einval}
+    end
+  end
+
+  # sqrt of a negative, log10 of zero, … — unevaluable, never a crash.
+  defp apply_unary_math(num, fun) do
+    {:ok, fun.(num) |> integer_if_possible()}
+  rescue
+    ArithmeticError -> {:error, :einval}
+  end
+
+  # Conversions for math operations, routed through the shared extractor
+  defp to_number(val) do
+    case Number.extract(val) do
+      {:ok, num} -> {:ok, num}
+      :error -> {:error, :einval}
+    end
+  end
 
   # Helper to convert values to floats for Float.* operations
-  defp to_float(val) when is_float(val), do: {:ok, val}
-  defp to_float(val) when is_integer(val), do: {:ok, val * 1.0}
-
-  defp to_float(val) when is_binary(val) do
-    case force_number(val) do
-      nil -> {:error, :einval}
-      {:error, :einval} -> {:error, :einval}
-      num when is_integer(num) -> {:ok, num * 1.0}
-      num when is_float(num) -> {:ok, num}
+  defp to_float(val) do
+    case Number.extract(val) do
+      {:ok, num} when is_integer(num) -> {:ok, num * 1.0}
+      {:ok, num} -> {:ok, num}
+      :error -> {:error, :einval}
     end
   end
-
-  defp to_float(_), do: {:error, :einval}
 
   # Helper to convert values to integers for precision parameters (truncates floats)
-  defp to_integer(val) when is_integer(val), do: {:ok, val}
-  defp to_integer(val) when is_float(val), do: {:ok, trunc(val)}
-
-  defp to_integer(val) when is_binary(val) do
-    case force_number(val) do
-      nil -> {:error, :einval}
-      {:error, :einval} -> {:error, :einval}
-      num when is_integer(num) -> {:ok, num}
-      num when is_float(num) -> {:ok, trunc(num)}
+  defp to_integer(val) do
+    case Number.extract(val) do
+      {:ok, num} when is_integer(num) -> {:ok, num}
+      {:ok, num} -> {:ok, trunc(num)}
+      :error -> {:error, :einval}
     end
   end
-
-  defp to_integer(_), do: {:error, :einval}
 
   def get_as_flat_list(maybe_value) when is_list(maybe_value),
     do: maybe_value |> List.flatten() |> Enum.reject(&is_nil/1)
@@ -660,51 +629,39 @@ defmodule Abacus.Eval do
   def get_as_flat_numbers_try_raw_first(maybe_value),
     do: [get_any_number_or_null(maybe_value)] |> Enum.reject(&is_nil/1)
 
-  def get_any_number_or_null(%{"raw_value" => raw_value, "display_text" => display_text}),
-    do: force_number_or_nil(raw_value) || force_number_or_nil(display_text)
-
-  def get_any_number_or_null(maybe_value), do: force_number_or_nil(maybe_value)
-
-  defp force_number(list) when is_list(list) do
-    {:error, :einval}
+  # Elements inside sum/average/min/max: blanks are dropped (an unanswered
+  # entry is not a zero), and option maps try raw_value then display_text.
+  def get_any_number_or_null(maybe_value) do
+    case Number.extract_strict(maybe_value) do
+      {:ok, num} -> num
+      :error -> nil
+    end
   end
 
+  # Only the equality path still uses this exact no-leftovers parse: `==` and
+  # `!=` deliberately do NOT coerce through Abacus.Number (that would newly
+  # make `"1180 " == "1180"` true).
   defp force_number(string) when is_binary(string) do
     # Our parsing specifically rejects anything that can't parse into
     # floats or ints without any "left-overs".
     if String.contains?(string, ".") do
       case Float.parse(string) do
-        {num, ""} ->
-          num
-
-        # new behaviour to align with JS
-        _ ->
-          nil
-          # old behaviour
-          # _ -> {:error, :einval}
+        {num, ""} -> num
+        _ -> nil
       end
     else
       case Integer.parse(string) do
-        {num, ""} ->
-          num
-
-        # new behaviour to align with JS
-        _ ->
-          nil
-          # old behaviour
-          # _ -> {:error, :einval}
+        {num, ""} -> num
+        _ -> nil
       end
     end
   end
 
-  defp force_number(num) when is_number(num), do: num
-  defp force_number(_), do: {:error, :einval}
-
-  defp force_number_or_nil(num) do
-    with {:error, :einval} <- force_number(num) do
-      nil
-    else
-      num -> num
+  # raw_num/display_num: blank → 0 like any arithmetic operand, junk → nil
+  defp number_or_nil(maybe_value) do
+    case Number.extract(maybe_value) do
+      {:ok, num} -> num
+      :error -> nil
     end
   end
 

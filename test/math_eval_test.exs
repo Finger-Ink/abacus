@@ -175,6 +175,105 @@ defmodule MathEvalTest do
     end
   end
 
+  describe "operator and operand parity with the JS engine" do
+    test "tight minus between variables is subtraction" do
+      assert {:ok, 250} == Abacus.eval("ka-kb", %{"ka" => "1180", "kb" => "930"})
+    end
+
+    test "modulo" do
+      assert {:ok, 1} == Abacus.eval("5 % 2")
+      assert {:ok, 1.5} == Abacus.eval("5.5 % 2")
+      # JS remainder semantics: the result takes the dividend's sign
+      assert {:ok, -1} == Abacus.eval("-5 % 2")
+    end
+
+    test "division by zero is unevaluable, not a crash" do
+      assert {:error, :einval} == Abacus.eval("1 / 0")
+      assert {:error, :einval} == Abacus.eval("a / b", %{"a" => "1180", "b" => "0"})
+      assert {:error, :einval} == Abacus.eval("a / b", %{"a" => "1180", "b" => ""})
+      assert {:error, :einval} == Abacus.eval("5 % 0")
+      assert {:error, :einval} == Abacus.eval("mod(5, 0)")
+      assert {:error, :einval} == Abacus.eval("0 ^ -1")
+    end
+
+    test "out-of-domain maths is unevaluable, not a crash" do
+      assert {:error, :einval} == Abacus.eval("sqrt(-1)")
+      assert {:error, :einval} == Abacus.eval("log10(0)")
+    end
+
+    test "operands coerce: whitespace, blanks, currency, percent, decimal commas" do
+      assert {:ok, 250} == Abacus.eval("a - b", %{"a" => "1180 ", "b" => " 930"})
+      assert {:ok, 1180} == Abacus.eval("a - b", %{"a" => "1180", "b" => ""})
+      assert {:ok, 1180} == Abacus.eval("a - b", %{"a" => "1180", "b" => nil})
+      assert {:ok, 250} == Abacus.eval("a - b", %{"a" => "$1,180", "b" => "930 %"})
+      assert {:ok, 1108} == Abacus.eval("a - b", %{"a" => "1.180,50", "b" => "72,5"})
+    end
+
+    test "results collapse to integers when whole, like JS numbers" do
+      assert {:ok, 5} == Abacus.eval("10 / 2")
+      assert {:ok, 5} == Abacus.eval("2.5 + 2.5")
+      assert {:ok, 1024} == Abacus.eval("2 ^ 10")
+    end
+
+    test "junk operands are unevaluable" do
+      assert {:error, :einval} == Abacus.eval("a - b", %{"a" => "abc", "b" => "930"})
+    end
+
+    test "ordering comparisons coerce numerically" do
+      assert {:ok, true} == Abacus.eval("a > b", %{"a" => "1180", "b" => "930"})
+      assert {:ok, false} == Abacus.eval("a > b", %{"a" => nil, "b" => "930"})
+      assert {:ok, true} == Abacus.eval("a < b", %{"a" => "", "b" => "1"})
+      # Both non-numeric strings: lexicographic, as JS compares two strings
+      assert {:ok, true} == Abacus.eval("a < b", %{"a" => "apple", "b" => "banana"})
+      # Junk string against a number: refused outright
+      assert {:ok, false} == Abacus.eval("a > 5", %{"a" => "abc"})
+      assert {:ok, false} == Abacus.eval("a < 5", %{"a" => "abc"})
+    end
+
+    test "option maps coerce raw value first, display text second" do
+      option = %{"raw_value" => "10", "display_text" => "Ten"}
+      assert {:ok, 15} == Abacus.eval("a + 5", %{"a" => option})
+
+      display_only = %{"raw_value" => nil, "display_text" => "10"}
+      assert {:ok, 15} == Abacus.eval("a + 5", %{"a" => display_only})
+    end
+
+    test "raw_num and display_num" do
+      option = %{"raw_value" => "7", "display_text" => "Seven"}
+      assert {:ok, 7} == Abacus.eval("raw_num(a)", %{"a" => option})
+      assert {:ok, nil} == Abacus.eval("display_num(a)", %{"a" => option})
+      assert {:ok, 0} == Abacus.eval("raw_num(a)", %{"a" => ""})
+      assert {:ok, 50} == Abacus.eval("display_num(a)", %{"a" => "50%"})
+    end
+
+    test "display function mirrors the JS engine" do
+      option = %{"display_text" => "Mild", "raw_value" => "1"}
+      assert {:ok, "Mild"} == Abacus.eval("display(a)", %{"a" => option})
+      assert {:ok, "Mild"} == Abacus.eval("display(a)", %{"a" => [option]})
+
+      assert {:ok, ["Mild", "Bad"]} ==
+               Abacus.eval("display(a)", %{
+                 "a" => [option, %{"display_text" => "Bad", "raw_value" => "2"}]
+               })
+
+      assert {:ok, "text"} == Abacus.eval("display(a)", %{"a" => "text"})
+      assert {:ok, nil} == Abacus.eval("display(a)", %{"a" => nil})
+    end
+
+    test "format round-trips strings and modulo" do
+      assert {:ok, ~s[a == "Yes"]} == Abacus.format(~s[a=="Yes"])
+      assert {:ok, "5 % 2"} == Abacus.format("5%2")
+      assert {:ok, ~s[a == "sa\\"id"]} == Abacus.format("a == \"sa\\\"id\"")
+    end
+
+    test "sum/average/min/max drop blanks but keep zeros" do
+      assert {:ok, 4} == Abacus.eval("sum(a, b, c)", %{"a" => "1", "b" => "", "c" => "3"})
+      assert {:ok, 2} == Abacus.eval("average(a, b, c)", %{"a" => "1", "b" => "", "c" => "3"})
+      assert {:ok, 0} == Abacus.eval("min(a, b)", %{"a" => "0", "b" => "5"})
+      assert {:ok, 3} == Abacus.eval("sum(a, b)", %{"a" => "$1", "b" => "2,0"})
+    end
+  end
+
   describe "average, max, min with empty/non-numeric data" do
     test "average returns error for empty list" do
       assert {:error, :einval} == Abacus.eval("average(a)", %{"a" => []})

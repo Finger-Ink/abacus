@@ -132,40 +132,42 @@ defmodule Abacus do
     end
   end
 
+  @doc """
+  Returns the unique variable names referenced anywhere in a parsed
+  expression — through arithmetic, functions, ternaries and index accesses.
+
+  Accepts the syntax-tree tuple from `parse/1`, or an `{:ok, expr}` parse
+  result directly.
+  """
+  def variables({:ok, expr}), do: variables(expr)
+
   def variables(expr) do
-    Abacus.Tree.reduce(expr, fn
-      {:access, variables} ->
-        res =
-          Enum.map(variables, fn
-            {:variable, var} -> var
-            {:index, index} -> variables(index)
-          end)
-          |> List.flatten()
-          |> Enum.uniq()
+    expr
+    |> collect_variables()
+    |> Enum.uniq()
+  end
 
-        {:ok, res}
-
-      {_operator, a, b, c} ->
-        res =
-          Enum.concat([a, b, c])
-          |> Enum.uniq()
-
-        {:ok, res}
-
-      {_operator, a, b} ->
-        res =
-          Enum.concat(a, b)
-          |> Enum.uniq()
-
-        {:ok, res}
-
-      {_operator, a} ->
-        a
-
-      _ ->
-        {:ok, []}
+  defp collect_variables({:access, parts}) do
+    Enum.flat_map(parts, fn
+      {:variable, name} -> [name]
+      {:index, index_expr} -> collect_variables(index_expr)
     end)
   end
+
+  defp collect_variables({:function, _name, args}), do: collect_variables(args)
+
+  defp collect_variables(args) when is_list(args),
+    do: Enum.flat_map(args, &collect_variables/1)
+
+  defp collect_variables({_operator, a, b, c}),
+    do: collect_variables(a) ++ collect_variables(b) ++ collect_variables(c)
+
+  defp collect_variables({_operator, a, b}),
+    do: collect_variables(a) ++ collect_variables(b)
+
+  defp collect_variables({_operator, a}), do: collect_variables(a)
+
+  defp collect_variables(_scalar), do: []
 
   defp lex(string) when is_binary(string) do
     string
