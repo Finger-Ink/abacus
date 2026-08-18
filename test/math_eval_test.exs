@@ -201,6 +201,19 @@ defmodule MathEvalTest do
       assert {:error, :einval} == Abacus.eval("log10(0)")
     end
 
+    test "trailing-dot float literals lex like JS" do
+      assert {:ok, 6} == Abacus.eval("5. + 1")
+      assert {:ok, 6} == Abacus.eval("2.*3")
+      assert {:ok, 2.0} == Abacus.eval("2.")
+      assert {:ok, 1.5} == Abacus.eval(".5 + 1")
+    end
+
+    test "a raise inside evaluation surfaces as an error tuple, not a crash" do
+      # Float.round/2 only accepts precisions 0..15. One bad expression must
+      # never take down a whole document render.
+      assert {:error, %ArgumentError{}} = Abacus.eval("round(1.234, 100)")
+    end
+
     test "operands coerce: whitespace, blanks, currency, percent, decimal commas" do
       assert {:ok, 250} == Abacus.eval("a - b", %{"a" => "1180 ", "b" => " 930"})
       assert {:ok, 1180} == Abacus.eval("a - b", %{"a" => "1180", "b" => ""})

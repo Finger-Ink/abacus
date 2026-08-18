@@ -18,6 +18,19 @@ defmodule AbacusTest do
            ] = lex_term("(3.2 + 4)")
   end
 
+  test "the lexer accepts floats with a bare dot on either side" do
+    # `list_to_float("6485000.")` used to raise here — the FLOAT_END rule
+    # matched the trailing dot but Erlang demands a digit after it. Prose
+    # like "call 6485000." flows through parse/1, so lexing must not raise.
+    assert [{:number, _, 6_485_000.0}] = lex_term("6485000.")
+    assert [{:number, _, 0.5}] = lex_term(".5")
+    assert [{:number, _, 2.0}, {:*, _}, {:number, _, 3}] = lex_term("2.*3")
+  end
+
+  test "parse returns an error tuple for prose, never raises" do
+    assert {:error, _} = Abacus.parse("Questions? Please call 6485000. Thanks!")
+  end
+
   describe "parse" do
     test "basic operators" do
       assert {:add, 1, 3} = parse_term("1+3")

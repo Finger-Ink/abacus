@@ -93,6 +93,11 @@ defmodule Abacus do
 
   def eval(expr, scope) do
     Abacus.Tree.reduce(expr, &Abacus.Eval.eval(&1, scope))
+  rescue
+    # A raise anywhere in evaluation (e.g. Float.round/2 with an
+    # out-of-range precision) must surface as an error tuple — one bad
+    # expression must never crash a caller's whole render.
+    error -> {:error, error}
   end
 
   @spec format(expr :: tuple | String.t() | charlist) :: {:ok, String.t()} | {:error, error :: map}
@@ -130,6 +135,10 @@ defmodule Abacus do
       {:error, error, _} -> {:error, error}
       {:error, error} -> {:error, error}
     end
+  rescue
+    # Callers feed arbitrary prose through here and fall back to other
+    # handling on {:error, _} — lexing/parsing must never raise.
+    error -> {:error, error}
   end
 
   @doc """

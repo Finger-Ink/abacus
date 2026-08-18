@@ -34,7 +34,9 @@ false : {token, {false, TokenLine}}.
 true : {token, {true, TokenLine}}.
 
 {INTEGER}    : {token, {number, TokenLine, list_to_integer(TokenChars)}}.
-{FLOAT_END}      : {token, {number, TokenLine, list_to_float(TokenChars)}}.
+% FLOAT_END permits "5." but list_to_float demands a digit after the dot, so
+% pad a trailing zero (the mirror of FLOAT_START's leading zero for ".5").
+{FLOAT_END}      : {token, {number, TokenLine, list_to_float(TokenChars ++ [48])}}.
 {FLOAT_START}      : {token, {number, TokenLine, list_to_float([48 | TokenChars])}}.
 {P_OPEN}    : {token, {'(', TokenLine}}.
 {P_CLOSE}   : {token, {')', TokenLine}}.
